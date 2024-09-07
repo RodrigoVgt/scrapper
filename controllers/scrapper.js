@@ -17,7 +17,7 @@ Scrapper.run = async function (pageNumber) {
                 const searchPage = `https://oficinabrasil.com.br/forum?page=${i + parseInt(pageNumber)}`
                 page.goto(searchPage, { waitUntil: 'load' })
 
-                await page.waitForXPath('/html/body/div[3]/div/div/div[2]/div[2]/div/div[2]/div/div[1]')
+                await page.waitForNavigation({ waitUntil: 'networkidle0' })
 
                 const currentQuestions = await page.$x('/html/body/div[3]/div/div[2]/div[2]/div[2]/div/div[2]/div/div')
 
