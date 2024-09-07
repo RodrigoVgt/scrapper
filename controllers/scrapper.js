@@ -61,8 +61,10 @@ Scrapper.run = async function (pageNumber) {
         })
 
         console.log("criados: " + created, "Erros: " + error, "Erro de página: " + pageError)
+        await browser.close()
         return (parseInt(pageNumber) + 5)
     } catch (e) {
+        await browser.close()
         return null
     }
 }
@@ -89,11 +91,10 @@ Scrapper.getTitle = async function(page){
 
 Scrapper.getQuestion = async function(page){
     try {
-        const text = await page.$$eval('div div a div.px-5 p.mb-1.text-md.text-ellipsis.line-clamp-6 p', elements => {
-            return elements.map(el => el.innerText);
-          });
-          //Falta ver aqui pra pegar a questão com multiplos P, ver com o gpt
-        return text ? text.trim().toLowerCase() : null
+        let text = await page.$$eval('div div a div.px-5 p', elements => {
+            return elements.map(el => el.innerText.replace(/\n/g, ' ').trim()).join(' ')
+          })
+        return text && text.length > 0 ? text.trim().toLowerCase() : null
     } catch (e) {
         console.log(e)
         return null
@@ -149,11 +150,10 @@ Scrapper.getClosed = async function(page){
 
 Scrapper.getHasImage = async function(page){
     try {
-        const image = await page.$('div div a div:nth-child(3)')
+        const image = await page.$eval('div div a div:nth-child(3)')
         return image ? true : false
     } catch (e) {
-        console.log(e)
-        return null
+        return false
     }
 }
 
