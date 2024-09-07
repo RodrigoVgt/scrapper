@@ -12,13 +12,12 @@ Scrapper.run = async function (pageNumber) {
         const browser = await puppeteer.launch({args: ['--no-sandbox'], headless: false});
         const page = await browser.newPage();
 
-        for(let i = 0; i < 5; i++){
+        for(let i = 0; i < 4; i++){
             try {
                 const searchPage = `https://oficinabrasil.com.br/forum?page=${i + parseInt(pageNumber)}`
-                page.goto(searchPage)
+                page.goto(searchPage, { waitUntil: 'load' })
 
-                await page.waitForSelector('div.relative.bottom-8.-mb-8.flex.justify-end.gap-2');
-
+                await page.waitForXPath('/html/body/div[3]/div/div/div[2]/div[2]/div/div[2]/div/div[1]')
 
                 const currentQuestions = await page.$x('/html/body/div[3]/div/div[2]/div[2]/div[2]/div/div[2]/div/div')
 
@@ -30,7 +29,7 @@ Scrapper.run = async function (pageNumber) {
                         const date = await this.getDate(iterator)
                         const user_name = await this.getUserName(iterator)
                         const has_image = await this.getHasImage(iterator)
-                        const answer = await this.getAnswer(iterator)
+                        const answer =await this.getAnswer(iterator)
                         const best_answer = await this.getBestAnswer(iterator)
                         const closed = await this.getClosed(iterator)
                         if(!question || !answer || answer.length < 1) {
@@ -150,8 +149,8 @@ Scrapper.getClosed = async function(page){
 
 Scrapper.getHasImage = async function(page){
     try {
-        const image = await page.$eval('div div a div:nth-child(3)')
-        return image ? true : false
+        const hasChildren = await page.$eval('div div a div:nth-child(4)', el => el.children.length > 0);
+        return hasChildren
     } catch (e) {
         return false
     }
