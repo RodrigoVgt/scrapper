@@ -9,12 +9,12 @@ Scrapper.run = async function (pageNumber) {
         let error = 0
         let pageError = 0
         const questionObj = []
-        const browser = await puppeteer.launch({args: ['--no-sandbox'], headless: false});
+        const browser = await puppeteer.launch({args: ['--no-sandbox'], headless: 'new'});
         const page = await browser.newPage();
 
-        for(let i = 0; i < 4; i++){
+        for(let i = 0; i < 5; i++){
             try {
-                const searchPage = `https://oficinabrasil.com.br/forum?page=${i + parseInt(pageNumber)}`
+                const searchPage = `https://oficinabrasil.com.br/forum?page=${i + parseInt(pageNumber)}`//&menu=closed
                 page.goto(searchPage, { waitUntil: 'load' })
 
                 await page.waitForNavigation({ waitUntil: 'networkidle0' })
@@ -29,16 +29,18 @@ Scrapper.run = async function (pageNumber) {
                         const date = await this.getDate(iterator)
                         const user_name = await this.getUserName(iterator)
                         const has_image = await this.getHasImage(iterator)
-                        const answer =await this.getAnswer(iterator)
-                        const best_answer = await this.getBestAnswer(iterator)
-                        const closed = await this.getClosed(iterator)
-                        if(!question || !answer || answer.length < 1) {
+                        const internalData = await this.getInternalData(iterator, page, browser)
+                        const answers = internalData.answers
+                        const best_answer = internalData.best_answer
+                        const closed = internalData.closed
+                        const pgNumber = (i + parseInt(pageNumber))
+                        if(!question || !type || !title) {
                             error++
                             continue
                         }
         
                         questionObj.push({
-                            type, title, question, answer, date, user_name, best_answer, closed, has_image
+                            type, title, question, answers, date, user_name, best_answer, closed, has_image, pgNumber
                         })
                     } catch(e) {
                         console.log(e)
@@ -53,11 +55,11 @@ Scrapper.run = async function (pageNumber) {
             }
         }
 
-        questionObj.forEach(async (question) => {
+        for(const question of questionObj){
             const result = await this.new(question)
             if(result) created++ 
             else error++
-        })
+        }
 
         console.log("criados: " + created, "Erros: " + error, "Erro de página: " + pageError)
         await browser.close()
@@ -100,9 +102,36 @@ Scrapper.getQuestion = async function(page){
     }
 }
 
-Scrapper.getAnswer = async function(page){
+Scrapper.getInternalData = async function(page, fullPage, browser){
     try {
+        // Métodos para trazer para abrir em uma nova página
+        const redirect = await page.$('div div a')
+        await fullPage.keyboard.down('Control')
+        await redirect.click()
+        await fullPage.keyboard.up('Control')
 
+        await new Promise(r => setTimeout(r, 1000))
+
+        const pages = await browser.pages()
+        const newPage = pages[pages.length - 1]
+        await newPage.bringToFront()
+
+        const answers = await this.getAnswers(newPage)
+        const closed = await this.getClosed(newPage)
+        let best_answer = false
+
+        answers.forEach((answer) => {
+            if (answer.best_answer) best_answer = true
+        })
+
+        await newPage.close()
+        await fullPage.bringToFront()
+
+        return {
+            answers,
+            best_answer,
+            closed
+        }
     } catch (e) {
         console.log(e)
         return []
@@ -129,21 +158,59 @@ Scrapper.getUserName = async function(page){
     }
 }
 
-Scrapper.getBestAnswer = async function(page){
+Scrapper.getAnswers = async function(page){
     try {
+        const answerList = await page.$x('/html/body/div[3]/div/div[2]/div[2]/div[2]/div/div[2]/div[contains(@class, "peer")]')
+        const data = []
+        let userData = {}
+        if(!answerList || answerList.length < 1) return data
 
-    } catch (e) {
-        console.log(e)
-        return null
+        for (const iterator of answerList) {
+            let best_answer = false
+            best_answer = await iterator.evaluate((element) => {
+                const imgs = Array.from(element.querySelectorAll('img')); 
+                return imgs.some(img => img.src.endsWith('/forum/ganhar.svg')); 
+            });
+
+            try{
+                if(best_answer){
+                    const answerXPath = await iterator.$('div div div:nth-child(2) div')
+                    const user = await answerXPath.$eval('div.flex.items-center.gap-5 div.font-semibold', element => element.innerText)
+                    const answer = await answerXPath.$eval('div.flex.items-center.gap-5 + div', element => element.innerText)
+                    const date = await answerXPath.$eval('div:nth-child(4)', element => element.innerText)
+                    userData = {
+                        user, date: stringToDate(date), best_answer: true, answer
+                    }
+                    
+                } else {
+                    const answerXPath = await iterator.$('div div div')
+                    const user = await answerXPath.$eval('div.flex.items-center.gap-5 div.font-semibold', element => element.innerText)
+                    const answer = await answerXPath.$eval('div.flex.items-center.gap-5 + div', element => element.innerText)
+                    const date = await answerXPath.$eval('div:nth-child(4)', element => element.innerText)
+                    userData = {
+                        user, date: stringToDate(date), best_answer: false, answer
+                    }
+                }
+            } catch (e) {
+                continue
+            }
+
+            data.push(userData)
+        }
+
+        return data
+    } catch (e) {  
+        return []
     }
 }
 
 Scrapper.getClosed = async function(page){
     try {
-
+        const text = await page.$eval('div.text-center.text-xl.text-white.font-semibold ', element => element.innerText)
+        if(text === 'Este tópico foi Encerrado por um Administrador') return true
+        return false
     } catch (e) {
-        console.log(e)
-        return null
+        return false
     }
 }
 
@@ -167,7 +234,8 @@ Scrapper.new = async function (question) {
             user_name: question.user_name,
             best_answer: question.best_answer,
             closed: question.closed,
-            has_image: question.has_image
+            has_image: question.has_image,
+            page: question.pgNumber
         })
         return currentData
     } catch (e) {

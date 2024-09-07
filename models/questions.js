@@ -35,6 +35,9 @@ const QuestionsModelSchema = new mongoose.Schema({
   has_image: {
     type: Boolean,
     default: false
+  },
+  page: {
+    type: Number
   }
 });
 
