@@ -4,15 +4,16 @@ const puppeteer = require('puppeteer')
 const Scrapper = () => {}
 
 Scrapper.run = async function (pageNumber) {
+    const browser = await puppeteer.launch({args: ['--no-sandbox'], headless: false});
     try {
         let created = 0
         let error = 0
         let pageError = 0
         const questionObj = []
-        const browser = await puppeteer.launch({args: ['--no-sandbox'], headless: 'new'});
         const page = await browser.newPage();
 
         for(let i = 0; i < 5; i++){
+            if(i + parseInt(pageNumber) > 4255) return
             try {
                 const searchPage = `https://oficinabrasil.com.br/forum?page=${i + parseInt(pageNumber)}`//&menu=closed
                 page.goto(searchPage, { waitUntil: 'load' })
