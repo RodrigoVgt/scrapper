@@ -26,7 +26,6 @@ Scrapper.run = async function (pageNumber) {
                     try{
                         const type = await this.getType(iterator)
                         const title = await this.getTitle(iterator)
-                        const question = await this.getQuestion(iterator)
                         const date = await this.getDate(iterator)
                         const user_name = await this.getUserName(iterator)
                         const has_image = await this.getHasImage(iterator)
@@ -34,6 +33,7 @@ Scrapper.run = async function (pageNumber) {
                         const answers = internalData.answers
                         const best_answer = internalData.best_answer
                         const closed = internalData.closed
+                        const question = internalData.question
                         const pgNumber = (i + parseInt(pageNumber))
                         if(!question || !type || !title) {
                             error++
@@ -93,9 +93,8 @@ Scrapper.getTitle = async function(page){
 
 Scrapper.getQuestion = async function(page){
     try {
-        let text = await page.$$eval('div div a div.px-5 p', elements => {
-            return elements.map(el => el.innerText.replace(/\n/g, ' ').trim()).join(' ')
-          })
+        const xpath = await page.$x('/html/body/div[3]/div/div[2]/div[2]/div[2]/div/div[2]/div[1]/div/div')
+        let text = await xpath[0].$eval('div:nth-child(3) h2', elements => elements.innerText)
         return text && text.length > 0 ? text.trim().toLowerCase() : null
     } catch (e) {
         console.log(e)
@@ -119,6 +118,7 @@ Scrapper.getInternalData = async function(page, fullPage, browser){
 
         const answers = await this.getAnswers(newPage)
         const closed = await this.getClosed(newPage)
+        const question = await this. getQuestion(newPage)
         let best_answer = false
 
         answers.forEach((answer) => {
@@ -131,7 +131,8 @@ Scrapper.getInternalData = async function(page, fullPage, browser){
         return {
             answers,
             best_answer,
-            closed
+            closed,
+            question
         }
     } catch (e) {
         console.log(e)
