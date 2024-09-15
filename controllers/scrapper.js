@@ -97,7 +97,6 @@ Scrapper.getQuestion = async function(page){
         let text = await xpath[0].$eval('div:nth-child(3) h2', elements => elements.innerText)
         return text && text.length > 0 ? text.trim().toLowerCase() : null
     } catch (e) {
-        console.log(e)
         return null
     }
 }
