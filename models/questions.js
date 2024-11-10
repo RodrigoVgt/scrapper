@@ -38,6 +38,10 @@ const QuestionsModelSchema = new mongoose.Schema({
   },
   page: {
     type: Number
+  },
+  tokenized: {
+    type: Boolean,
+    default: false
   }
 });
 
