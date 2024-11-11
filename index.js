@@ -1,10 +1,15 @@
 const express = require('express');
-const Scrapper = require('./controllers/scrapper');
+
 const app = express();
+
+const Scrapper = require('./controllers/scrapper');
 const TokenGenerator = require('./controllers/tokenGenerator')
+const MilvusController = require('./controllers/milvusController')
+
 const QuestionsModel = require('./models/questions')
 const Tokens = require('./models/tokens')
 const TokensNB = require('./models/tokensnb')
+
 
 const PORT = process.env.PORT || 3000;
 
@@ -72,10 +77,7 @@ app.get('/run_tokenizer', async (req, res) => {
 })
 
 app.get('/update', async (req, res) => {
-    await Tokens.create({
-        token: req.body,
-        question: "66dcc4b7d1a680bbd685f152",
-    });
+    await MilvusController.createTokens()
     return res.status(200).send('Ok')
 })
 
