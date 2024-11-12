@@ -69,9 +69,9 @@ MilvusController.createTokens = async function() {
     }
 };
 
-MilvusController.search = async function(body){
+MilvusController.search = async function(token){
     try {
-        const result = await MilvusQuery.searchAllTokens(body.token)
+        const result = await MilvusQuery.search(token)
         return result
     } catch (error) {
         return null

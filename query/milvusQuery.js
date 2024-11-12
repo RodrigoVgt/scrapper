@@ -27,37 +27,7 @@ function validateQueryVector(vector) {
     return vector;
 }
 
-// Consulta para buscar tokens semelhantes
-MilvusQuery.searchTokens = async function(queryVector) {
-    const milvus = await this.connect();
-    const collectionName = 'tokens_collection';
-
-    try {
-        // Valida o vetor de entrada
-        const validatedVector = validateQueryVector(queryVector);
-
-
-        await milvus.loadCollection({ collection_name: collectionName });
-
-        // Configura e executa a consulta
-        const searchParams = {
-            collection_name: collectionName,
-            expr: '',  // Use uma expressão de filtro, se necessário
-            vectors: [validatedVector],
-            search_params: { anns_field: 'token_vector', topk: 5, metric_type: 'L2', params: { nprobe: 10 } },
-            output_fields: ['question_id']
-        };
-
-        const result = await milvus.search(searchParams);
-        console.log('Resultados da consulta:', JSON.stringify(result, null, 2));
-    } catch (error) {
-        console.error('Erro ao realizar a consulta:', error);
-    } finally {
-        milvus.closeConnection();
-    }
-};
-
-MilvusQuery.searchAllTokens = async function(token) {
+MilvusQuery.search = async function(token) {
     const milvus = await connectToMilvus();
 
     const collectionName = "tokens_collection";
@@ -90,6 +60,7 @@ MilvusQuery.searchAllTokens = async function(token) {
       return bestResult
     } catch (err) {
       console.error("Erro ao realizar a busca:", err);
+      return null
     }
   }
 

@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require("cors");
 
 const app = express();
 
@@ -13,6 +14,7 @@ const TokensNB = require('./models/tokensnb')
 
 const PORT = process.env.PORT || 3000;
 
+app.use(cors())
 app.use(express.json());
 
 app.get('/teste', async (req, res) => {
@@ -79,6 +81,28 @@ app.get('/run_tokenizer', async (req, res) => {
 app.get('/update', async (req, res) => {
     await MilvusController.search(req.body)
     return res.status(200).send('Ok')
+})
+
+app.post('/get_response', async (req, res) => {
+    try {
+        const { body } = req
+
+        const tokens = await TokenGenerator.generate(body.message)
+        const mostSimilar = await MilvusController.search(tokens.values)
+        if(!mostSimilar) throw new Error("Não foi possivel localizar similaridade")
+
+        const question = await QuestionsModel.findOne({_id: mostSimilar.question_id})
+
+        const GeminiResponse = await TokenGenerator.generateResponse(body.message, question)
+
+        if(GeminiResponse) return res.status(200).send({ response: GeminiResponse })
+
+        throw new Error("Erro ao montar resposta baseada no banco de dados")
+    } catch (err) {
+        if(err.message) return res.status(500).send({ response: err.message })
+        return res.status(500).send({ response: "Não Foi possível recuperar mensagens, tente novamente mais tarde!" })
+    }
+
 })
 
 app.listen(PORT, () => {
