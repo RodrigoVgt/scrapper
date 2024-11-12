@@ -77,7 +77,7 @@ app.get('/run_tokenizer', async (req, res) => {
 })
 
 app.get('/update', async (req, res) => {
-    await MilvusController.createTokens()
+    await MilvusController.search(req.body)
     return res.status(200).send('Ok')
 })
 
